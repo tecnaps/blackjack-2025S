@@ -3,10 +3,15 @@ import java.util.List;
 
 public class Hand {
 
-    private final List<Card> cards;
+    // This class implements a hand in a card game
 
-    public Hand(){
+    private final List<Card> cards;
+    private boolean stand = false;
+    private int index;
+
+    public Hand(int index){
         this.cards = new ArrayList<>();
+        this.index = index;
     }
 
     public void addCard(Card card){
@@ -21,8 +26,20 @@ public class Hand {
         return cards.size();
     }
 
+    public int getHandNr (){
+        return index;
+    }
+
     public void clear(){
         cards.clear();
+    }
+
+    public void stand(){
+        stand = true;
+    }
+
+    public boolean isStandingDown (){
+        return stand;
     }
 
     @Override

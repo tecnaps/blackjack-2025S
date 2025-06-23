@@ -5,7 +5,7 @@ import java.util.List;
 
 public class Deck {
 
-    // This class implements a simple multi card deck
+    // This class implements a multi card deckS
 
     private final List <Card> cards;
 

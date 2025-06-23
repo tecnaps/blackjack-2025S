@@ -1,6 +1,6 @@
 public class Card {
 
-    // This class implements a simple playing card
+    // This class implements a playing card
 
     private final String suit;
     private final String rank;
