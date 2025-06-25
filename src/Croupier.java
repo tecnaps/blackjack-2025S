@@ -6,7 +6,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +27,7 @@ public class Croupier{
     private static final int BUFFER_SIZE=4096;
     private static BufferedReader input;
     private static MessageBus bus = new MessageBus();
-
+    private static HashMap <InetAddress, String> addressLookup = new HashMap <>();
 
     // Croupier stuff
     private static Table table;
@@ -36,73 +35,153 @@ public class Croupier{
     private static final int numberOfDecks=6;
     private static Deck deck;
     private static Hand croupierHand;
-    
-    //private static int[][] bets = new int[MAX_PLAYER][2];
-        
-    private static HashMap <InetAddress, String> addressLookup = new HashMap <>();
+
+/********************************
+ ** main method, program start **
+ ********************************/
+
 
     public static void main(String[] args)throws IOException{
 
-        new Thread(()-> System.out.println("Hello")).start();
+        // set port for udp socket
+        localport = UtilityCloset.setPort();
 
-        input = new BufferedReader(new InputStreamReader(System.in));
+        // determine local ip
+        localhost = UtilityCloset.getLocalIP();
 
-        while (localport==-1){
-
-            try{
-
-                System.out.println("\nPlease enter a portnumber for the program to listen at. (valid port numbers: 1023 - 65535)");
-                localport = Integer.parseInt(input.readLine());
-
-                if(localport < 0 || 65535 < localport)
-                    throw new IOException("\nport is out of range.");
-                
-                if(!UtilityCloset.freePort(localport))
-                    throw new IOException("\nport is already in use.");
-                break;
-
-            } catch (IOException e){
-                System.out.println(e.getMessage());
-                localport = -1;
-            } catch (NumberFormatException e){
-                System.out.println("\nPlease input an Integer.");
-                localport = -1;
-            }
-
-        }
-        // get local ip
-
-        try {
-        
-            localhost = InetAddress.getLocalHost();
-        
-        }catch(UnknownHostException e){
-        
-            System.out.println("Unable to determine local IP address.");
-        
-        }
+        if(localhost == null)
+            return;
 
         try{
 
             socket = new DatagramSocket(localport);
 
-            Thread receiver = new Thread(() -> {try{                
-                                                    receiver(socket);
-                                                } catch (IOException e){
-                                                    System.out.println("receiver shutdown.");
-                                                }});
+            Thread receiver = new Thread(() -> { try{ receiver(socket);} 
+                                                 catch (IOException e){ System.out.println("receiver shutdown.");}
+                                                });
             receiver.start();
             initGame();
 
         } catch(IOException e){
-
-            // add meaningful exception handling
-
+            // generic
         } finally{
             input.close();
             socket.close();
         }
     }
+
+
+/**********************************************
+ ** Initialisation, registration, game start **
+ **********************************************/
+
+    private static void initGame(){
+
+        // setup input
+        input = new BufferedReader(new InputStreamReader(System.in));
+        String line;
+
+        // setup game objects
+        table = new Table(MAX_PLAYER);
+        deck = new Deck(numberOfDecks);
+        deck.shuffle();
+
+        UtilityCloset.greeter();
+        
+        while(true){
+            try{
+            line = input.readLine();
+
+            // splitting strings
+            line = line.trim();
+
+            switch(line.toLowerCase()){
+                case "start":
+                    if (table.getPlayerCnt() == 0)
+                        throw new StartGameException("No player has been registered at this table.");
+                    
+                    if (table.getKartenzaehler() == null)
+                        throw new StartGameException("No kartenzaehler has been registered at this table.");
+                    
+                    System.out.println("Starting game.");
+
+                    // add message to all registered players and kartenzaehler
+                    
+                    blackJack();
+                    break;
+                
+                case "contact":
+                    System.out.println("local IP:\t" + localhost.getHostAddress() + "\nlocal port:\t" + localport);
+                    break;
+
+                case "clear":
+
+                    // a message should be sent to each player and the kartenzaehler, but no format has been specified yet
+                    // hence no such format is implemented by the player or kartenzaehler class
+
+                    table = new Table(MAX_PLAYER);
+                    break;
+
+                case "help":
+                    UtilityCloset.help();
+
+                    break;
+
+                case "exit": return;
+                
+                default: System.out.println("\"" + line + "\" is not a known command.");
+                }
+            } catch (StartGameException startException){
+                System.out.println(startException.getMessage());
+            } catch (IOException e){
+            // generic
+            }
+
+        }
+    }
+
+
+    private static void registerPlayer (RegREQ register, InetAddress srcAddress, int srcPort) throws RegisterException{
+
+        // This method registers players
+
+        // check whether table exists
+        if(table == null)
+            table = new Table(MAX_PLAYER);
+        
+        // check whether table is full
+        if(table.getPlayerCnt() != table.getNumberOfSeats()){
+
+            if(!addressLookup.containsKey(srcAddress)){
+
+                InetSocketAddress contact = new InetSocketAddress(srcAddress, srcPort);
+                table.addPlayer(register.name, register.credit, contact);
+                addressLookup.put(srcAddress, register.name);
+            }
+        }
+        else{
+            throw new RegisterException ("Player is already registered at this table."); 
+        }
+    }
+
+    private static void registerZaehler(RegREQ register, InetAddress srcAddress, int srcPort) throws RegisterException{
+
+        // This method registers Kartenzaehler
+
+        if(table.getKartenzaehler()==null)
+            table.setKartenzaehler(new InetSocketAddress(srcAddress, srcPort));
+    
+        else{
+            throw new RegisterException ("Another kartenzaehler is already registered at this table.");
+
+        }
+    }
+
+
+/*********************************************
+ ** receiver logic for incoming UDP Packets **
+ *********************************************/
+
 
     private static void receiver (DatagramSocket socket)throws IOException{
         
@@ -191,52 +270,11 @@ public class Croupier{
         }
     }
 
-    private static void initGame(){
 
-        // setup game objects
-        table = new Table(MAX_PLAYER);
-        deck = new Deck(numberOfDecks);
-        deck.shuffle();
+    /*********************************************
+     ** Game logic and and outgoing UDP packets **
+     *********************************************/
 
-        // setup input stuff
-        String line;
-        
-        while(true){
-            try{
-            line = input.readLine();
-
-            // splitting strings
-            line = line.trim();
-            String[] tokens = line.split("\\s+");
-
-            switch(tokens[0]){
-                case "start":
-                    if (table.getPlayerCnt() == 0)
-                        throw new StartGameException("No player has been registered at this table.");
-                    
-                    if (table.getKartenzaehler() == null)
-                        throw new StartGameException("No kartenzaehler has been registered at this table.");
-                    
-                    System.out.println("Starting game.");
-
-                    // add message to all registered players and kartenzaehler
-                    
-                    blackJack();
-                    break;
-                
-                case "exit": return;
-                
-                default:
-                    System.out.println(line + " is not a known command.");
-                }
-            } catch (StartGameException startException){
-                System.out.println(startException.getMessage());
-            } catch (IOException e){
-            // generic
-            }
-
-        }
-    }
 
     private static void blackJack(){
 
@@ -364,9 +402,7 @@ public class Croupier{
         } catch (TimeoutException timeoutException){
             // generic
         } catch (Exception e){
-            // generic for JSONProcessingException (mapper)
-            // generic for IOException (socket)
-            // generic for the InterruptedException and the ExecutionException (future)
+            // generic
         }
 
         // test for blackJack
@@ -597,6 +633,43 @@ public class Croupier{
             }
         }
 
+        // croupier turn
+
+        // add additional json format to inform players of the cards the croupier has drawn
+
+        while(true){
+            try{
+                // display cards
+                System.out.println("\ncurrent hand:\n" + croupierHand.toString() + "\ncurrent Points: " +croupierHand.calculatePoints()+"\navailable actions: <hit>, <stand>\n");
+
+                if(croupierHand.calculatePoints() <= 17){
+                    String line = input.readLine();
+                    line.trim();
+                    switch(line.toLowerCase()){
+                        case "hit": 
+                            Card newCard = deck.draw();
+                            croupierHand.addCard(newCard);
+                            System.out.println("new card: " + newCard.toString());
+                            break;
+
+                        case "stand":
+                            croupierHand.stand();
+                            break;
+                        default: System.out.println("\"" + line + "\" is not a known command.");
+                    }
+                } else
+                    croupierHand.stand();
+                
+                if(croupierHand.isStandingDown() || croupierHand.calculatePoints() > 17)
+                    break;
+            } catch(DeckException deckException){
+                System.out.println(deckException.getMessage());
+            } catch(IOException iOException){
+                // generic
+            }
+        }
+
+
         // payout and cleanup
 
         for(Seat seat: table.getSeats()){
@@ -631,52 +704,4 @@ public class Croupier{
         }
     }
 
-
-
-
-    private static void registerPlayer (RegREQ register, InetAddress srcAddress, int srcPort) throws RegisterException{
-
-        // This method registers players
-
-        // check whether table exists
-        if(table == null)
-            table = new Table(MAX_PLAYER);
-        
-        // check whether table is full
-        if(table.getPlayerCnt() != table.getNumberOfSeats()){
-
-            if(!addressLookup.containsKey(srcAddress)){
-
-                InetSocketAddress contact = new InetSocketAddress(srcAddress, srcPort);
-                table.addPlayer(register.name, register.credit, contact);
-                addressLookup.put(srcAddress, register.name);
-            }
-        }
-        else{
-            throw new RegisterException ("Player is already registered at this table."); 
-        }
-    }
-
-    private static void registerZaehler(RegREQ register, InetAddress srcAddress, int srcPort) throws RegisterException{
-
-        // This method registers Kartenzaehler
-
-        if(table.getKartenzaehler()==null)
-            table.setKartenzaehler(new InetSocketAddress(srcAddress, srcPort));
-    
-        else{
-            throw new RegisterException ("Another kartenzaehler is already registered at this table.");
-
-        }
-    }
-
-    // Abfrage von Statistiken mit Kartenzähler
-
-    private void stats(){
-
-    }
-
-    private void recommendation(){
-
-    }
 }

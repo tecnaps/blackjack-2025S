@@ -176,7 +176,7 @@ public class Hand {
         StringBuilder sb = new StringBuilder();
         
         for (Card card: cards)
-            sb.append(card.toString()).append(" ");
+            sb.append(card.toString()).append("\n");
         
         return sb.toString();    
     }   
