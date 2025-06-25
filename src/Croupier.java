@@ -198,11 +198,12 @@ public class Croupier{
         // This method receives incomming UDP Packages and parses them for known JSON objects 
 
         byte[] buffer = new byte[BUFFER_SIZE];
+        byte[] packetBuffer = new byte[BUFFER_SIZE];
         ObjectMapper mapper = new ObjectMapper();
         BlackJackMessage message = null;
 
         while(true){
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+            DatagramPacket packet = new DatagramPacket(packetBuffer, packetBuffer.length);
             socket.receive(packet);
 
             String payload = new String(packet.getData(), 0, packet.getLength(), "UTF-8");
@@ -274,6 +275,7 @@ public class Croupier{
                 // turn ACK
                 case "action": 
                     if (message instanceof TurnACK response){
+                        mapper.writeValueAsString(message);
                         CompletableFuture<TurnACK> future = bus.turnRequests.get(packet.getAddress());
                         if(future != null)
                             future.complete(response);
