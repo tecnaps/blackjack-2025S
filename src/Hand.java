@@ -9,11 +9,11 @@ public class Hand {
 
     private final List<Card> cards;
     private boolean stand = false;
+    private boolean bust = false;
     private Player player = null;
     private int index;
     private int initialBet = 0;
     private int totalAmount = 0;
-
 
     public Hand(){
         this.cards = new ArrayList<>();
@@ -53,16 +53,25 @@ public class Hand {
         return null;
     }
 
-    public void setInitialBet(int amount){
-        if(initialBet == 0 && player.getCredit()- amount >= 0){
-            initialBet = amount;
-            player.setCredit(player.getCredit()- amount);
-            totalAmount = amount;
-            player.increaseBet(amount);
+
+    public void setBust(){
+        bust = true;
+    }
+
+    public boolean getBust(){
+        return bust;
+    }
+
+    public void setInitialBet(int amount) throws illegalHandException{
+        if(initialBet == 0){
+            if(player.getCredit() - amount >= 0){
+                initialBet = amount;
+                player.setCredit(amount);
+                totalAmount = amount;
+                player.increaseBet(amount);
+            } else 
+                throw new illegalHandException("You do not have enough funds to make this bet.");
         }
-        if(player.getCredit()- amount < 0)
-            // add Exception and error handling here
-            ;
     }
 
     public int getInitialBet(){
@@ -73,14 +82,13 @@ public class Hand {
         return totalAmount;
     }
 
-    public void doubleDown(){
+    public void doubleDown() throws illegalHandException {
         if(player.getCredit() - initialBet >= 0){
             totalAmount += initialBet;
             player.increaseBet(initialBet);
         }
         else
-            // add exception and error handling here
-            ; 
+            throw new illegalHandException("Insufficient funds to double down."); 
     }
 
     public void setHandNr(int index){
@@ -121,29 +129,31 @@ public class Hand {
         
         boolean ace = false;
         boolean otherCard = false;
+        if(cards.size() == 2){
+            for(Card card: cards){
 
-        for(Card card: cards){
+                switch(card.getRank()){
+                
+                    case "A":
+                        if(ace == true)
+                            return false;
 
-            switch(card.getRank()){
+                        ace = true;
+                        break;
+                
+                    case "10", "J", "Q", "K":
+                        if(otherCard == true)
+                            return false;
+
+                        otherCard = true;
+                        break;
             
-                case "Ace":
-                    if(ace == true)
-                        return false;
-
-                    ace = true;
-                    break;
-            
-                case "10", "J", "Q", "K":
-                    if(otherCard == true)
-                        return false;
-
-                    otherCard = true;
-                    break;
-        
-                default: return false;
+                    default: return false;
+                }
             }
+            return true;
         }
-        return true;
+        return false;
     }
 
     public int calculatePoints(boolean croupier){

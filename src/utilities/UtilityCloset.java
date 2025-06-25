@@ -89,7 +89,7 @@ public class UtilityCloset {
     public static void greeter(){
 
         // This method implements a greeting message explaining certain commands to the User
-        int numberOfLines = 7;
+        int numberOfLines = 8;
         String greetingMsg = "";
         String[] Msg = new String[numberOfLines];
 
@@ -99,7 +99,8 @@ public class UtilityCloset {
         Msg[3] = "A game may be started by entering <start> in the console. ";
         Msg[4] = "However, to successfully start a game at least one player and one kartenzaehler must be registered. ";
         Msg[5] = "Once a game is finished the program may be closed by entering <exit> in the console.\n";
-        Msg[6] = "\nTo see a list of all available commands type <help>.\n";
+        Msg[6] = "\nTo see a list of all available commands type <help>. ";
+        Msg[7] = "To bypass the lack of a kartenzaehler type <idkfa>.\n";
         
         for(int i = 0; i < numberOfLines; i++)
             greetingMsg +=Msg[i];
