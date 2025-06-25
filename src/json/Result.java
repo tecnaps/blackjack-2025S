@@ -5,6 +5,8 @@ public class Result implements BlackJackMessage{
     public int earnings;
     public String message;
 
+    public Result(){}
+
     public Result(int earnings, String message){
         this.earnings = earnings;
         this.message = message;

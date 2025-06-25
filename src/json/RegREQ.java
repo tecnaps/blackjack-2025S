@@ -6,13 +6,15 @@ public class RegREQ implements BlackJackMessage{
 
     public String type = "register";
     public Role role;
-    public int credit;
     public String name;
+    public int credit;
+
+    public RegREQ(){}
 
     public RegREQ(Role role, int credit, String name){
         this.role = role;
-        this.credit = credit;
         this.name = name;
+        this.credit = credit;
     }
 
     @Override

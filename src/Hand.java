@@ -17,7 +17,7 @@ public class Hand {
 
     public Hand(){
         this.cards = new ArrayList<>();
-        index = -1;
+        index = player.getNumberOfHands()+1;
     }
     public Hand(int index){
         this.cards = new ArrayList<>();
@@ -47,20 +47,33 @@ public class Hand {
     }
 
     public void setInitialBet(int amount){
-        if(initialBet == 0){
+        if(initialBet == 0 && player.getCredit()- amount >= 0){
             initialBet = amount;
+            player.setCredit(player.getCredit()- amount);
             totalAmount = amount;
             player.increaseBet(amount);
         }
+        if(player.getCredit()- amount < 0)
+            // add Exception and error handling here
+            ;
     }
 
     public int getInitialBet(){
         return initialBet;
     }
 
+    public int getTotalAmount(){
+        return totalAmount;
+    }
+
     public void doubleDown(){
-        totalAmount += initialBet;
-        player.increaseBet(initialBet); 
+        if(player.getCredit() - initialBet >= 0){
+            totalAmount += initialBet;
+            player.increaseBet(initialBet);
+        }
+        else
+            // add exception and error handling here
+            ; 
     }
 
     public void setHandNr(int index){
@@ -126,7 +139,7 @@ public class Hand {
         return true;
     }
 
-    public int calculatePoints(){
+    public int calculatePoints(boolean croupier){
         int total = 0;
         int aces = 0;
 
@@ -139,7 +152,7 @@ public class Hand {
                     total += 10;
                     break;
                 
-                case "Ace":
+                case "A":
 
                     total += 11;
                     aces++;
@@ -149,7 +162,7 @@ public class Hand {
             }
         }
 
-        while(total > 21 && aces > 0){
+        while(total > 21 && aces > 0 && !croupier){
 
             total -= 10;
             aces--;

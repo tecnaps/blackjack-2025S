@@ -4,11 +4,13 @@ package json;
 
 public class TurnACK implements BlackJackMessage{
     public String type = "action";
-    public String move;
+    public String action;
     public int handIndex;
 
+    public TurnACK(){}
+
     public TurnACK (String move, int handIndex){
-        this.move = move;
+        this.action = move;
         this.handIndex = handIndex;
     }
 

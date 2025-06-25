@@ -80,6 +80,7 @@ public class Croupier{
         // setup input
         input = new BufferedReader(new InputStreamReader(System.in));
         String line;
+        boolean retry = false;
 
         // setup game objects
         table = new Table(MAX_PLAYER);
@@ -90,47 +91,56 @@ public class Croupier{
         
         while(true){
             try{
-            line = input.readLine();
+                if(retry)
+                    System.out.println("\nTo Start another round at the same type <start>. To clear the table type <clear>. For more information type <help>.\n");
 
-            // splitting strings
-            line = line.trim();
+                line = input.readLine();
 
-            switch(line.toLowerCase()){
-                case "start":
-                    if (table.getPlayerCnt() == 0)
-                        throw new StartGameException("No player has been registered at this table.");
+                // splitting strings
+                line = line.trim();
+
+                switch(line.toLowerCase()){
+                    case "start":
+                        if (table.getPlayerCnt() == 0)
+                            throw new StartGameException("No player has been registered at this table.");
+                        
+                        if (table.getKartenzaehler() == null)
+                            throw new StartGameException("No kartenzaehler has been registered at this table.");
+                        
+                        System.out.println("Starting game.");
+
+                        // add message to all registered players and kartenzaehler
+                        
+                        blackJack();
+                        retry = true;
+                        break;
                     
-                    if (table.getKartenzaehler() == null)
-                        throw new StartGameException("No kartenzaehler has been registered at this table.");
+                    case "contact":
+                        System.out.println("local IP:\t" + localhost.getHostAddress() + "\nlocal port:\t" + localport);
+                        break;
+
+                    case "clear":
+
+                        // a message should be sent to each player and the kartenzaehler, but no format has been specified yet
+                        // hence no such format is implemented by the player or kartenzaehler class
+
+                        table = new Table(MAX_PLAYER);
+                        break;
+
+                    case "help":
+                        UtilityCloset.help();
+
+                        break;
+
+                    case "idkfa":
+                        // for debugging and testing
+                        table.setKartenzaehler(new InetSocketAddress(localhost, localport));
+                        break;
+
+                    case "exit": return;
                     
-                    System.out.println("Starting game.");
-
-                    // add message to all registered players and kartenzaehler
-                    
-                    blackJack();
-                    break;
-                
-                case "contact":
-                    System.out.println("local IP:\t" + localhost.getHostAddress() + "\nlocal port:\t" + localport);
-                    break;
-
-                case "clear":
-
-                    // a message should be sent to each player and the kartenzaehler, but no format has been specified yet
-                    // hence no such format is implemented by the player or kartenzaehler class
-
-                    table = new Table(MAX_PLAYER);
-                    break;
-
-                case "help":
-                    UtilityCloset.help();
-
-                    break;
-
-                case "exit": return;
-                
-                default: System.out.println("\"" + line + "\" is not a known command.");
-                }
+                    default: System.out.println("\"" + line + "\" is not a known command.");
+                    }
             } catch (StartGameException startException){
                 System.out.println(startException.getMessage());
             } catch (IOException e){
@@ -203,7 +213,7 @@ public class Croupier{
                 System.out.println(jsonException.getMessage());
                 continue;
             } catch (Exception e){
-                // generic
+                e.printStackTrace();
             }
 
             switch(message.getType()){
@@ -228,8 +238,13 @@ public class Croupier{
                     try{                    
                         RegREQ register = (RegREQ) message;
 
-                        if(register.role==Role.Spieler)
+                        if(register.role==Role.Spieler){
                             registerPlayer(register, packet.getAddress(), packet.getPort());
+                            RegACK regSuccessPrep = new RegACK();
+                            buffer = mapper.writeValueAsBytes(regSuccessPrep);
+                            DatagramPacket regSuccessPack = new DatagramPacket(buffer, buffer.length, packet.getAddress(), packet.getPort());
+                            socket.send(regSuccessPack);
+                        }
                         else
                             registerZaehler(register, packet.getAddress(), packet.getPort());
                     
@@ -282,9 +297,67 @@ public class Croupier{
 
         byte[] BlackJackBuffer = new byte[BUFFER_SIZE];
         ObjectMapper mapper = new ObjectMapper();
-        
+        croupierHand = null;
         // eject players that have won to often
         // send list of players to kartenzaehler
+
+        // notify game start
+
+        for(Seat seat:table.getSeats())
+            if(seat.isOccupied()){
+                try{
+                    InetSocketAddress contact = seat.getPlayer().getContact();
+                    StartGame startPrep = new StartGame();
+                    BlackJackBuffer = mapper.writeValueAsBytes(startPrep);
+                    DatagramPacket startPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
+                    socket.send(startPack);
+
+                    // debugging
+                    System.out.println(contact.getAddress()+":"+contact.getPort());
+                    System.out.println(mapper.writeValueAsString(startPrep));
+
+                }catch(Exception e){ e.printStackTrace();}
+            }
+
+        // betting phase
+
+        try{
+            for(Seat seat: table.getSeats()){
+                if(seat.isOccupied()){
+                    
+                    InetSocketAddress contact = seat.getPlayer().getContact();
+
+                    // send BetREQ
+
+                    BetREQ betREQ = new BetREQ();
+                    BlackJackBuffer = mapper.writeValueAsBytes(betREQ);
+                    DatagramPacket sendBetREQ = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
+                    socket.send(sendBetREQ);
+
+                    // create future
+                    
+                    CompletableFuture<BetACK> future = new CompletableFuture<>();
+                    bus.betRequests.put(contact.getAddress(), future);
+
+                    // wait for response
+
+                    BetACK futureResponse = future.get(180, TimeUnit.SECONDS);
+
+                    // create initial Hand
+                    seat.getPlayer().addHand(new Hand(0));
+                    seat.getPlayer().getHand(0).setPlayer(seat.getPlayer());
+
+                    // place bet
+                    seat.getPlayer().getHand(0).setInitialBet(futureResponse.amount);
+
+                }
+            }
+        } catch (TimeoutException timeoutException){
+            timeoutException.printStackTrace();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
 
         // deal cards
 
@@ -292,30 +365,31 @@ public class Croupier{
             for(int turn = 0; turn < 2; turn++){
                 for (Seat seat: table.getSeats()){
                     if(seat.isOccupied()){
+                        // debugging
+                        System.out.println(seat.getPosition());
                 
                         Player player = seat.getPlayer();
                         InetSocketAddress contact = player.getContact();
 
-                        if (player.getNumberOfHands()==0){
-                            
-                            // create new Hand
-                            Hand newHand = new Hand(player.getNumberOfHands()+1);
-                            newHand.setPlayer(player);
+                        if (player.getHand(0).getCards().size() == 0){
 
                             // draw card
                             Card newCard = deck.draw();
 
-                            // add to hand
-                            newHand.addCard(newCard);
+                            // debugging
+                            System.out.println(newCard.toString());
 
-                            // add hand
-                            player.addHand(newHand);
+                            // add to hand
+                            player.getHand(0).addCard(newCard);
 
                             // send card to player
-                            DrawCard newCardPrep = new DrawCard(new PlayerCard(newCard.getRank(), newCard.getSuit()));
+                            DrawCard newCardPrep = new DrawCard(new PlayerCard(newCard.getRank(), newCard.getSuit()), 0);
                             BlackJackBuffer = mapper.writeValueAsBytes(newCardPrep);
-                            DatagramPacket newCardPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
+                            DatagramPacket newCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                             socket.send(newCardPack);
+
+                            // Debugging
+                            System.out.println(mapper.writeValueAsString(newCardPrep));
 
                             // send new card to kartenzaehler
 
@@ -327,24 +401,30 @@ public class Croupier{
 
                             Card newCard = deck.draw();
 
+                            // debugginQg
+                            System.out.println(newCard.toString());
+
                             // add to hand
 
-                            player.getHand(1).addCard(newCard);
+                            player.getHand(0).addCard(newCard);
 
                             // send new card to player
 
-                            DrawCard newCardPrep = new DrawCard(new PlayerCard(newCard.getRank(), newCard.getSuit()));
+                            DrawCard newCardPrep = new DrawCard(new PlayerCard(newCard.getRank(), newCard.getSuit()),0);
                             BlackJackBuffer = mapper.writeValueAsBytes(newCardPrep);
-                            DatagramPacket newCardPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
+                            DatagramPacket newCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                             socket.send(newCardPack);
 
+                            // Debugging
+                            System.out.println(mapper.writeValueAsString(newCardPrep));
+                            
                             // send new card to kartenzaehler
                         }
                     }
                 }
                 // Croupier logic
                 if(croupierHand == null){
-                    croupierHand = new Hand(1);
+                    croupierHand = new Hand(0);
                     croupierHand.addCard(deck.draw());
 
                     // the first croupier card is send to each player with the first TurnREQ below
@@ -366,43 +446,7 @@ public class Croupier{
 
             return;
         } catch (Exception e){
-            // generic
-        }
-
-        // betting phase
-
-        try{
-            for(Seat seat: table.getSeats()){
-                if(seat.isOccupied()){
-                    
-                    InetSocketAddress contact = seat.getPlayer().getContact();
-
-                    // send BetREQ
-
-                    BetREQ betREQ = new BetREQ();
-                    BlackJackBuffer = mapper.writeValueAsBytes(betREQ);
-                    DatagramPacket sendBetREQ = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
-                    socket.send(sendBetREQ);
-
-                    // create future
-                    
-                    CompletableFuture<BetACK> future = new CompletableFuture<>();
-                    bus.betRequests.put(contact.getAddress(), future);
-
-                    // wait for response
-
-                    BetACK futureResponse = future.get(180, TimeUnit.SECONDS);
-
-                    // place bet
-
-                    seat.getPlayer().getHand(1).setInitialBet(futureResponse.amount);
-
-                }
-            }
-        } catch (TimeoutException timeoutException){
-            // generic
-        } catch (Exception e){
-            // generic
+            e.printStackTrace();
         }
 
         // test for blackJack
@@ -417,11 +461,11 @@ public class Croupier{
 
                 if (seat.isOccupied()){
                     // compute payouts                
-                    if (seat.getPlayer().getHand(1).checkBlackJack()){
-                        seat.getPlayer().payout(1.5);
+                    if (seat.getPlayer().getHand(0).checkBlackJack()){
+                        seat.getPlayer().payout(seat.getPlayer().getHand(0).getInitialBet()*1.5);
                         multiplier = 1.5;
                     } else{
-                        seat.getPlayer().payout(-1);
+                        seat.getPlayer().payout(seat.getPlayer().getHand(0).getInitialBet()*(-1));
                         multiplier = -1;
                     }
                     
@@ -432,7 +476,7 @@ public class Croupier{
                     try{
                         Result resultPrep = new Result((int) (seat.getPlayer().getBet()*multiplier), multiplier==1.5? "You won.": "You lost.");
                         BlackJackBuffer = mapper.writeValueAsBytes(resultPrep);
-                        DatagramPacket resultPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
+                        DatagramPacket resultPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                         socket.send(resultPack);
                     } catch (IOException e){
                         // generic
@@ -462,7 +506,7 @@ public class Croupier{
                     // send surrender request
                     SurrenderREQ surrenderRequest = new SurrenderREQ();
                     BlackJackBuffer = mapper.writeValueAsBytes(surrenderRequest);
-                    DatagramPacket sendRequest = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
+                    DatagramPacket sendRequest = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                     socket.send(sendRequest);
                 
                     // create future
@@ -479,12 +523,12 @@ public class Croupier{
                         surrenderCnt++;
 
                         // calculate payout
-                        seat.getPlayer().payout(0.5);
+                        seat.getPlayer().payout(seat.getPlayer().getHand(0).getInitialBet()*0.5);
 
                         // send result
-                        Result resultPrep = new Result((int) (seat.getPlayer().getBet()*0.5), "You surrendered.");
+                        Result resultPrep = new Result((int) (seat.getPlayer().getHand(0).getInitialBet()*0.5), "You surrendered.");
                         BlackJackBuffer = mapper.writeValueAsBytes(resultPrep);
-                        DatagramPacket resultPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
+                        DatagramPacket resultPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                         socket.send(resultPack);
                     }
                 }
@@ -520,7 +564,7 @@ public class Croupier{
                     PlayerCard croupierCard = new PlayerCard(croupierHand.getCard(1).getRank(), croupierHand.getCard(1).getSuit()); 
                     TurnREQ croupierCardPrep = new TurnREQ(croupierCard);
                     BlackJackBuffer = mapper.writeValueAsBytes(croupierCardPrep);
-                    DatagramPacket croupierCardPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
+                    DatagramPacket croupierCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                     socket.send(croupierCardPack);
             
                     do{
@@ -534,21 +578,24 @@ public class Croupier{
                 
                         TurnACK futureResponse = future.get(180, TimeUnit.SECONDS);
 
-                        switch(futureResponse.move){
+                        switch(futureResponse.action){
                             case "hit": 
                                 
                                 // draw card
 
                                 Card newCard = deck.draw();
+                                
                                 seat.getPlayer().getHand(futureResponse.handIndex).addCard(newCard);
+
+                                // Debugging
+                                System.out.println(seat.getPlayer().getHands().toString());
 
                                 // send card
 
-                                DrawCard newCardPrep = new DrawCard(new PlayerCard(newCard.getRank(), newCard.getSuit()));
+                                DrawCard newCardPrep = new DrawCard(new PlayerCard(newCard.getRank(), newCard.getSuit()), futureResponse.handIndex);
                                 BlackJackBuffer = mapper.writeValueAsBytes(newCardPrep);
-                                DatagramPacket newCardPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(),contact.getPort());
+                                DatagramPacket newCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(),contact.getPort());
                                 socket.send(newCardPack);
-
                                 break;
 
                             case "split": 
@@ -571,9 +618,9 @@ public class Croupier{
 
                                 // send card
 
-                                DrawCard firstCardPrep = new DrawCard(new PlayerCard(firstCard.getRank(), firstCard.getSuit()));
+                                DrawCard firstCardPrep = new DrawCard(new PlayerCard(firstCard.getRank(), firstCard.getSuit()), futureResponse.handIndex);
                                 BlackJackBuffer = mapper.writeValueAsBytes(firstCardPrep);
-                                DatagramPacket firstCardPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
+                                DatagramPacket firstCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                                 socket.send(firstCardPack);
 
                                 // draw card for second hand
@@ -583,9 +630,9 @@ public class Croupier{
 
                                 // send card
 
-                                DrawCard secondCardPrep = new DrawCard(new PlayerCard(secondCard.getRank(), secondCard.getSuit()));
+                                DrawCard secondCardPrep = new DrawCard(new PlayerCard(secondCard.getRank(), secondCard.getSuit()), secondHand.getHandNr());
                                 BlackJackBuffer = mapper.writeValueAsBytes(secondCardPrep);
-                                DatagramPacket secondCardPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
+                                DatagramPacket secondCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                                 socket.send(secondCardPack);
 
                                 break;
@@ -603,9 +650,9 @@ public class Croupier{
 
                                 // send card
 
-                                newCardPrep = new DrawCard(new PlayerCard(newCard.getRank(), newCard.getSuit()));
+                                newCardPrep = new DrawCard(new PlayerCard(newCard.getRank(), newCard.getSuit()), futureResponse.handIndex);
                                 BlackJackBuffer = mapper.writeValueAsBytes(newCardPrep);
-                                newCardPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
+                                newCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                                 socket.send(newCardPack);
 
                                 // end turn
@@ -618,17 +665,15 @@ public class Croupier{
                                 seat.getPlayer().getHand(futureResponse.handIndex).stand();
                         }
 
-                        // check whether player has any more moves left
-
-                        if(seat.getPlayer().isStandingDown())
-                            break;
-
+                        // Debugging
+                        System.out.println(seat.getPlayer().isStandingDown());
+                        
                 } while (!seat.getPlayer().isStandingDown());
 
                 } catch(IOException iOException){
-                    // generic
+                    iOException.printStackTrace();
                 } catch(Exception e){
-                    // generic
+                    e.printStackTrace();
                 }
             }
         }
@@ -640,9 +685,9 @@ public class Croupier{
         while(true){
             try{
                 // display cards
-                System.out.println("\ncurrent hand:\n" + croupierHand.toString() + "\ncurrent Points: " +croupierHand.calculatePoints()+"\navailable actions: <hit>, <stand>\n");
+                System.out.println("\ncurrent hand:\n" + croupierHand.toString() + "\ncurrent Points: " +croupierHand.calculatePoints(true)+"\navailable actions: <hit>, <stand>\n");
 
-                if(croupierHand.calculatePoints() <= 17){
+                if(croupierHand.calculatePoints(true) <= 17){
                     String line = input.readLine();
                     line.trim();
                     switch(line.toLowerCase()){
@@ -660,7 +705,7 @@ public class Croupier{
                 } else
                     croupierHand.stand();
                 
-                if(croupierHand.isStandingDown() || croupierHand.calculatePoints() > 17)
+                if(croupierHand.isStandingDown() || croupierHand.calculatePoints(true) > 17)
                     break;
             } catch(DeckException deckException){
                 System.out.println(deckException.getMessage());
@@ -675,32 +720,40 @@ public class Croupier{
         for(Seat seat: table.getSeats()){
             double earnings = 0;
             if(seat.isOccupied()){
-                for(Hand hand: seat.getPlayer().getHands()){
-                    if(hand.checkBlackJack())
-                        earnings = hand.getInitialBet()*1.5;
-                    else if (hand.calculatePoints()<=21 && croupierHand.calculatePoints() < hand.calculatePoints())
-                        earnings += hand.getInitialBet();
-                    else if (21 < hand.calculatePoints() || hand.calculatePoints() < croupierHand.calculatePoints())
-                        earnings -= hand.getInitialBet();
+                if(21 < croupierHand.calculatePoints(true))
+                    for(Hand hand : seat.getPlayer().getHands()){
+                        earnings += hand.getTotalAmount();
                     }
+                else    
+                    for(Hand hand: seat.getPlayer().getHands()){
+                        if(hand.checkBlackJack())
+                            earnings = hand.getTotalAmount()*1.5;
+                        else if (hand.calculatePoints(false)<=21 && croupierHand.calculatePoints(true) < hand.calculatePoints(false))
+                            earnings += hand.getTotalAmount();
+                        else if (21 < hand.calculatePoints(false) || hand.calculatePoints(false) < croupierHand.calculatePoints(true))
+                            earnings -= hand.getTotalAmount();
+                        }
+    
+                    seat.getPlayer().payout(earnings);
+                    System.out.println(earnings>=0?seat.getPlayer().getName()+ " earned " + earnings: seat.getPlayer().getName()+ " lost "+ earnings );
+                    
+
+                // get contact
+                InetSocketAddress contact = seat.getPlayer().getContact();
+
+                // send results
+                try{
+                    Result resultPrep = new Result((int) earnings, "Your total earnings are " + (int) earnings);
+                    BlackJackBuffer = mapper.writeValueAsBytes(resultPrep);
+                    DatagramPacket resultPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
+                    socket.send(resultPack);
+                } catch(IOException iOException){
+                    // generic
+                }
+
+                // cleanup
+                seat.getPlayer().cleanup();
             }
-            seat.getPlayer().payout(earnings);
-
-            // get contact
-            InetSocketAddress contact = seat.getPlayer().getContact();
-
-            // send results
-            try{
-                Result resultPrep = new Result((int) earnings, "Your total earnings are " + (int) earnings);
-                BlackJackBuffer = mapper.writeValueAsBytes(resultPrep);
-                DatagramPacket resultPack = new DatagramPacket(BlackJackBuffer, BUFFER_SIZE, contact.getAddress(), contact.getPort());
-                socket.send(resultPack);
-            } catch(IOException iOException){
-                // generic
-            }
-
-            // cleanup
-            seat.getPlayer().cleanup();
         }
     }
 

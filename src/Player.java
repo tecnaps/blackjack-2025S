@@ -12,7 +12,7 @@ public class Player {
     private boolean stand = false;
     private boolean lost = false; 
     private boolean surrender = false;
-    private int numberOfHands = 0;
+    private int numberOfHands = -1;
     private int totalAmount = 0;
 
 
@@ -26,6 +26,10 @@ public class Player {
 
     public String getName(){
         return name;
+    }
+
+    public void setCredit(int amount){
+        credit -=amount;
     }
 
     public int getCredit(){
@@ -61,8 +65,10 @@ public class Player {
         for(Hand hand: hands)
             if(!hand.isStandingDown()){
                 stand = false;
-                break;}
-        return stand;
+                return false;
+            }
+        stand = true;
+        return true;
     }
     
     public void addHand(Hand hand){
@@ -74,9 +80,9 @@ public class Player {
     public Hand getHand(int index){
         if (index <= numberOfHands){
             for(Hand hand: hands){
-                index--;
                 if(index == 0)
                     return hand;
+                index--;
             }                
         }
         return null;
@@ -99,7 +105,7 @@ public class Player {
     }
 
     public void payout(double result){
-        credit += totalAmount*result; 
+        credit += totalAmount+result; 
         
         if(0 < credit)
             credit = 0;
@@ -113,7 +119,7 @@ public class Player {
             hand.clear();
         }
         
-        hands = null;
+        hands = new ArrayList<>();
         totalAmount = 0;
         numberOfHands = 0;
         stand = false;

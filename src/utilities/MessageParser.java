@@ -15,7 +15,13 @@ public class MessageParser{
     public static BlackJackMessage parse(String json) throws Exception{
 
         JsonNode root = mapper.readTree(json);
-        String type = root.get("type").asText();
+
+        JsonNode typeNode = root.get("type");
+        if(typeNode == null || typeNode.isNull())
+            throw new UnknownJsonTypeException("Missing 'type' field in JSON: " + json);
+
+        String type = typeNode.asText();
+        
         Class<? extends BlackJackMessage> messageClass = MessageRegistry.JSONTYPES.get(type);
 
         if(messageClass == null) {
