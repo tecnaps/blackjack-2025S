@@ -19,6 +19,13 @@ public class Hand {
         this.cards = new ArrayList<>();
         index = player.getNumberOfHands()+1;
     }
+
+    public Hand(Player player){
+        this.cards = new ArrayList<>();
+        this.player = player;
+        index = player.getNumberOfHands()+1;
+    }
+
     public Hand(int index){
         this.cards = new ArrayList<>();
         this.index = index;
@@ -96,12 +103,12 @@ public class Hand {
         return cards.size() == 2 && cards.get(0).getRank().equals(cards.get(1).getRank());
     }
 
-    public Hand split() throws illegalHandException{
+    public Hand split(Player player) throws illegalHandException{
 
         if(!canISplitt())
             throw new illegalHandException("Hand is not a pair.");
         
-        Hand secondHand = new Hand();
+        Hand secondHand = new Hand(player);
         
         // the first hand is never destroyed only shrunk by 1 card
         secondHand.addCard(cards.remove(1));

@@ -313,8 +313,8 @@ public class Croupier{
                     socket.send(startPack);
 
                     // debugging
-                    System.out.println(contact.getAddress()+":"+contact.getPort());
-                    System.out.println(mapper.writeValueAsString(startPrep));
+                    // System.out.println(contact.getAddress()+":"+contact.getPort());
+                    // System.out.println(mapper.writeValueAsString(startPrep));
 
                 }catch(Exception e){ e.printStackTrace();}
             }
@@ -366,7 +366,7 @@ public class Croupier{
                 for (Seat seat: table.getSeats()){
                     if(seat.isOccupied()){
                         // debugging
-                        System.out.println(seat.getPosition());
+                        // System.out.println(seat.getPosition());
                 
                         Player player = seat.getPlayer();
                         InetSocketAddress contact = player.getContact();
@@ -377,7 +377,7 @@ public class Croupier{
                             Card newCard = deck.draw();
 
                             // debugging
-                            System.out.println(newCard.toString());
+                            // System.out.println(newCard.toString());
 
                             // add to hand
                             player.getHand(0).addCard(newCard);
@@ -389,7 +389,7 @@ public class Croupier{
                             socket.send(newCardPack);
 
                             // Debugging
-                            System.out.println(mapper.writeValueAsString(newCardPrep));
+                            // System.out.println(mapper.writeValueAsString(newCardPrep));
 
                             // send new card to kartenzaehler
 
@@ -402,7 +402,7 @@ public class Croupier{
                             Card newCard = deck.draw();
 
                             // debugginQg
-                            System.out.println(newCard.toString());
+                            // System.out.println(newCard.toString());
 
                             // add to hand
 
@@ -416,7 +416,7 @@ public class Croupier{
                             socket.send(newCardPack);
 
                             // Debugging
-                            System.out.println(mapper.writeValueAsString(newCardPrep));
+                            // System.out.println(mapper.writeValueAsString(newCardPrep));
                             
                             // send new card to kartenzaehler
                         }
@@ -523,10 +523,10 @@ public class Croupier{
                         surrenderCnt++;
 
                         // calculate payout
-                        seat.getPlayer().payout(seat.getPlayer().getHand(0).getInitialBet()*0.5);
+                        seat.getPlayer().payout(seat.getPlayer().getHand(0).getInitialBet()*(-0.5));
 
                         // send result
-                        Result resultPrep = new Result((int) (seat.getPlayer().getHand(0).getInitialBet()*0.5), "You surrendered.");
+                        Result resultPrep = new Result((int) (seat.getPlayer().getHand(0).getInitialBet()*(-0.5)), "You surrendered.");
                         BlackJackBuffer = mapper.writeValueAsBytes(resultPrep);
                         DatagramPacket resultPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
                         socket.send(resultPack);
@@ -588,7 +588,7 @@ public class Croupier{
                                 seat.getPlayer().getHand(futureResponse.handIndex).addCard(newCard);
 
                                 // Debugging
-                                System.out.println(seat.getPlayer().getHands().toString());
+                                // System.out.println(seat.getPlayer().getHands().toString());
 
                                 // send card
 
@@ -596,44 +596,69 @@ public class Croupier{
                                 BlackJackBuffer = mapper.writeValueAsBytes(newCardPrep);
                                 DatagramPacket newCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(),contact.getPort());
                                 socket.send(newCardPack);
+                                
+                                // added
+                                TurnREQ turnRequestPrep = new TurnREQ(croupierCard);
+                                BlackJackBuffer = mapper.writeValueAsBytes(turnRequestPrep);
+                                DatagramPacket turnRequestPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
+                                socket.send(turnRequestPack);
+                                
+                                if(seat.getPlayer().getHand(futureResponse.handIndex).calculatePoints(false) > 21)
+                                    seat.getPlayer().getHand(futureResponse.handIndex).stand();
+
                                 break;
 
                             case "split": 
 
-                                //split hand
+                                if(seat.getPlayer().getHand(futureResponse.handIndex).getCard(0) == seat.getPlayer().getHand(futureResponse.handIndex).getCard(1)){
+                                    //split hand
 
-                                Hand secondHand = seat.getPlayer().getHand(futureResponse.handIndex).split();
-                                Hand firstHand = seat.getPlayer().getHand(futureResponse.handIndex);
-                                secondHand.setPlayer(seat.getPlayer());
-                                seat.getPlayer().addHand(secondHand);
+                                    Hand secondHand = seat.getPlayer().getHand(futureResponse.handIndex).split(seat.getPlayer());
+                                    Hand firstHand = seat.getPlayer().getHand(futureResponse.handIndex);
+                                    secondHand.setPlayer(seat.getPlayer());
+                                    seat.getPlayer().addHand(secondHand);
 
-                                // request additional bet (equal to original)
+                                    // request additional bet (equal to original)
+                                    
+                                    secondHand.setInitialBet(firstHand.getInitialBet());
+
+                                    // draw card for first hand
+
+                                    Card firstCard = deck.draw();
+                                    firstHand.addCard(firstCard);
+
+                                    // send card
+
+                                    DrawCard firstCardPrep = new DrawCard(new PlayerCard(firstCard.getRank(), firstCard.getSuit()), futureResponse.handIndex);
+                                    BlackJackBuffer = mapper.writeValueAsBytes(firstCardPrep);
+                                    DatagramPacket firstCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
+                                    socket.send(firstCardPack);
+
+                                    // draw card for second hand
+
+                                    Card secondCard = deck.draw();
+                                    secondHand.addCard(secondCard);
+
+                                    // send card
+
+                                    DrawCard secondCardPrep = new DrawCard(new PlayerCard(secondCard.getRank(), secondCard.getSuit()), secondHand.getHandNr());
+                                    BlackJackBuffer = mapper.writeValueAsBytes(secondCardPrep);
+                                    DatagramPacket secondCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
+                                    socket.send(secondCardPack);
                                 
-                                secondHand.setInitialBet(firstHand.getInitialBet());
+                                } else{
 
-                                // draw card for first hand
+                                    MalformedRequest errorPrep = new MalformedRequest("Split unpossible");
+                                    BlackJackBuffer = mapper.writeValueAsBytes(errorPrep);
+                                    DatagramPacket errorPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
+                                    socket.send(errorPack);
+                                }
 
-                                Card firstCard = deck.draw();
-                                firstHand.addCard(firstCard);
-
-                                // send card
-
-                                DrawCard firstCardPrep = new DrawCard(new PlayerCard(firstCard.getRank(), firstCard.getSuit()), futureResponse.handIndex);
-                                BlackJackBuffer = mapper.writeValueAsBytes(firstCardPrep);
-                                DatagramPacket firstCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
-                                socket.send(firstCardPack);
-
-                                // draw card for second hand
-
-                                Card secondCard = deck.draw();
-                                secondHand.addCard(secondCard);
-
-                                // send card
-
-                                DrawCard secondCardPrep = new DrawCard(new PlayerCard(secondCard.getRank(), secondCard.getSuit()), secondHand.getHandNr());
-                                BlackJackBuffer = mapper.writeValueAsBytes(secondCardPrep);
-                                DatagramPacket secondCardPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
-                                socket.send(secondCardPack);
+                                // added
+                                turnRequestPrep = new TurnREQ(croupierCard);
+                                BlackJackBuffer = mapper.writeValueAsBytes(turnRequestPrep);
+                                turnRequestPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
+                                socket.send(turnRequestPack);
 
                                 break;
 
@@ -659,6 +684,11 @@ public class Croupier{
 
                                 seat.getPlayer().getHand(futureResponse.handIndex).stand();
 
+                                // added
+                                turnRequestPrep = new TurnREQ(croupierCard);
+                                BlackJackBuffer = mapper.writeValueAsBytes(turnRequestPrep);
+                                turnRequestPack = new DatagramPacket(BlackJackBuffer, BlackJackBuffer.length, contact.getAddress(), contact.getPort());
+                                socket.send(turnRequestPack);
                                 break;
 
                             case "stand": 
@@ -666,7 +696,7 @@ public class Croupier{
                         }
 
                         // Debugging
-                        System.out.println(seat.getPlayer().isStandingDown());
+                        // System.out.println(seat.getPlayer().isStandingDown());
                         
                 } while (!seat.getPlayer().isStandingDown());
 
