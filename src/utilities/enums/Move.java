@@ -1,8 +1,8 @@
 package utilities.enums;
 
 public enum Move {
-    Hit,
-    Stand,
-    Split,
-    DoubleDown
+    hit,
+    stand,
+    split,
+    double_down
 }

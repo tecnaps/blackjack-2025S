@@ -1,22 +1,26 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.net.InetSocketAddress;
 
 public class Player {
 
     private String name;
     private int credit;
+    private InetSocketAddress contact;
     private List <Hand> hands;
+
     private boolean stand = false;
     private boolean lost = false; 
+    private boolean surrender = false;
     private int numberOfHands = 0;
-    // InetSocketAddress for Address and port??
-    //private int original_bet;
-    
+    private int totalAmount = 0;
 
-    public Player (String name, int credit){
+
+    public Player (String name, int credit, InetSocketAddress contact){
 
         this.name = name;
         this.credit = credit;
+        this.contact = contact;
         hands = new ArrayList<>();
     }
 
@@ -28,9 +32,18 @@ public class Player {
         return credit;
     }
 
-    public int getNumberOfHands(){
-        return numberOfHands;
+    public InetSocketAddress getContact(){
+        return contact;
     }
+
+    public void increaseBet(int amount){
+        totalAmount+=amount;
+    }
+
+    public int getBet(){
+        return totalAmount;
+    }
+
 
     public void lost(){
         lost = true;
@@ -40,9 +53,11 @@ public class Player {
         return lost;
     }
 
-
     public boolean isStandingDown(){
-        
+    
+        // stand is called for each hand, we check here whether stand has been called for a hands 
+        // and set stand to true if this is the case
+
         for(Hand hand: hands)
             if(!hand.isStandingDown()){
                 stand = false;
@@ -53,10 +68,57 @@ public class Player {
     public void addHand(Hand hand){
         hands.add(hand);
         numberOfHands++;
+        hand.setHandNr(numberOfHands);
+    }
+
+    public Hand getHand(int index){
+        if (index <= numberOfHands){
+            for(Hand hand: hands){
+                index--;
+                if(index == 0)
+                    return hand;
+            }                
+        }
+        return null;
     }
 
     public List<Hand> getHands(){
         return hands;
+    }
+
+    public int getNumberOfHands(){
+        return numberOfHands;
+    }
+
+    public void surrender(){
+        surrender = true;
+    }
+
+    public boolean hasSurrendered(){
+        return surrender;
+    }
+
+    public void payout(double result){
+        credit += totalAmount*result; 
+        
+        if(0 < credit)
+            credit = 0;
+
+    }
+
+    public void cleanup(){
+
+        for(Hand hand: hands){
+            hand.setPlayer(null);
+            hand.clear();
+        }
+        
+        hands = null;
+        totalAmount = 0;
+        numberOfHands = 0;
+        stand = false;
+        lost = false;
+        surrender = false;
     }
 
 }

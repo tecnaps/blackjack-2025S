@@ -4,9 +4,11 @@ public class Seat {
 
     private final int position;
     private Player player;
+    private Table table;
 
-    public Seat(int position){
+    public Seat(Table table, int position){
         this.position = position;
+        this.table = table;
         this.player = null;
     }
     
@@ -25,4 +27,12 @@ public class Seat {
     public int getPosition(){
         return position;
     }    
+
+    public Player getPlayer(){
+        return player;
+    }
+
+    public Table getTable(){
+        return table;
+    }
 }

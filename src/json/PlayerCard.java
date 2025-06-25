@@ -1,11 +1,12 @@
 package json;
 
-public class Card {
+public class PlayerCard {
     public String rank;
     public String suit;
 
-    public Card (String rank, String suit){
+    public PlayerCard (String rank, String suit){
         this.rank = rank;
         this.suit = suit;
     }
+
 }

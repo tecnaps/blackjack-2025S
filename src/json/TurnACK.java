@@ -1,13 +1,19 @@
 package json;
 
-import utilities.enums.Move;
+//import utilities.enums.Move;
 
-public class TurnACK {
+public class TurnACK implements BlackJackMessage{
     public String type = "action";
-    public Move move;
+    public String move;
+    public int handIndex;
 
-    public TurnACK (Move move){
+    public TurnACK (String move, int handIndex){
         this.move = move;
+        this.handIndex = handIndex;
     }
 
+    @Override
+    public String getType(){
+        return type;
+    }
 }

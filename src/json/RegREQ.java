@@ -2,7 +2,7 @@ package json;
 
 import utilities.enums.Role;
 
-public class RegREQ {
+public class RegREQ implements BlackJackMessage{
 
     public String type = "register";
     public Role role;
@@ -13,6 +13,11 @@ public class RegREQ {
         this.role = role;
         this.credit = credit;
         this.name = name;
+    }
+
+    @Override
+    public String getType(){
+        return type;
     }
 
 }

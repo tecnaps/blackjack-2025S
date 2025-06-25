@@ -2,6 +2,8 @@ import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
 
+import utilities.exceptions.DeckException;
+
 
 public class Deck {
 
@@ -26,9 +28,9 @@ public class Deck {
         Collections.shuffle(cards);
     }
 
-    public Card draw(){
+    public Card draw() throws DeckException{
         if(cards.isEmpty())
-            throw new IllegalStateException("Deck is empty.");
+            throw new DeckException("Deck is empty.");
         
         return cards.remove(cards.size()-1);
     }
