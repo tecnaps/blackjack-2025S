@@ -31,7 +31,9 @@
 	\textbf{Aufgabe 1}\par
 	\normalsize
 	\vspace{12pt}
-	Siehe google docs und Diagramme unter \textit{diagrams/} bzw. \textit{out/}
+	Siehe google docs und Diagramme unter \textit{diagrams/} bzw. \textit{out/}\par
+	\vspace{6pt}
+	\textbf{harte 17} bedeutet, eine Hand hat insgesamt 17 Punkte, ohne dass das Ass mit 11 Punkten gezählt wird. Diese Zählweise ist hart, da die Zahl der Punkte nicht nach unten korrigiert werden kann, wenn das Ass lediglich mit 1 Punkt gezählt wird. Entsprechend sind die 17 Punkte \textbf{weich}, falls die Punktzahl gesenkt werden kann.\par
 	\vspace{24pt}
 	
 	\large
@@ -39,21 +41,32 @@
 	\normalsize
 	\vspace{12pt}
 	
-	Es muss sichergestellt werden, dass nachrichten, die verschickt werden, ankommen. Das kann durch ein Quittungssystem sichergestellt werden, das für jede versendete spielbezogene Nachricht auf eine Quittung wartet. Damit das jeweilige Programm (Croupier, Kartenzähler oder Spieler) nicht zu lange wartet, sollte weiterhin ein Timeout für die Antwort festgelegt werden. Ferner kann die Kommunikation zwischen den 3 Programmen robuster gemacht werden, indem Nachrichten, die die zulässige Zeit (timeout) überschritten haben, erneut gesendet werden. Dabei sollte einerseits eine maximale Anzahl an \textit{resends} festgelegt werden, z.B. 5 und andererseits sollte die Länge des Timeouts für jeden \textit{resend} erhöht werden.\par
-	Um Fehlinterpretationen von Paketen zu vermeiden, sollte eine einheitliche Syntax für den Aufbau der Nachrichten sowie ein einheitliches Format z.B. Json festgelegt werden. ()Siehe google Docs.)\par
-	Außerdem soillte ein allgemeiner Programmablauf und die Punkte an denen Nachrichten ausgetauscht sowie welche Nachrichten an diesen Punkten ausgetauscht werden, festgelegt werden. Das verhindert, dass der Programmfluss stecken bleibt, da ein oder mehrere Teilnehmer auf Nachrichten warten, die nicht gesendet werden.\par
-	
+	Es muss sichergestellt werden, dass Nachrichten, die verschickt werden, ankommen. Das kann durch ein Quittungssystem sichergestellt werden, das für jede versendete spielbezogene Nachricht auf eine Quittung wartet. Damit das jeweilige Programm (Croupier, Kartenzähler oder Spieler) nicht zu lange wartet, sollte weiterhin ein Timeout für die Antwort festgelegt werden. Ferner kann die Kommunikation zwischen den 3 Programmen robuster gemacht werden, indem Nachrichten, die die zulässige Zeit (timeout) überschritten haben, erneut gesendet werden. Dabei sollte einerseits eine maximale Anzahl an \textit{resends} festgelegt werden, z.B. 5 und andererseits sollte die Länge des Timeouts für jeden \textit{resend} erhöht werden.\par
+	Um Fehlinterpretationen von Paketen zu vermeiden, sollte eine einheitliche Syntax für den Aufbau der Nachrichten sowie ein einheitliches Format z.B. Json festgelegt werden. (Siehe google Docs.)\par
+	Außerdem sollte ein allgemeiner Programmablauf und die Punkte an denen Nachrichten ausgetauscht sowie welche Nachrichten an diesen Punkten ausgetauscht werden, festgelegt werden. Das verhindert, dass der Programmfluss stecken bleibt, da ein oder mehrere Teilnehmer auf Nachrichten warten, die nicht gesendet werden.\par
+	\vspace{24pt}
+		
 	\large
 	\textbf{Aufgabe 3}\par
 	\normalsize
 	\vspace{12pt}
 	Leider hat sich niemand, der/die einen Kartenzähler implementieren sollten an unserer Diskussion im google Docs beteiligt, entsprechend fehlt die Logik für die Kommunikation mit dieser Klasse / ist nur in Ansätzen in meiner Implementierung der Croupier-Klasse vorhanden.\par
+	\vspace{24pt}
+	\newpage
 	
 	\large
 	\textbf{Aufgabe 4}\par
 	\normalsize
 	\vspace{12pt}
 	
-	Haben wir gemacht. Waren gefühlt aber auch die einzigen 3 Teilnehmer, die das google Docs genutzt haben. Schade, weil die Aufgabe eigentlich echt Spaß gemacht hat\par. 
+	Haben wir gemacht. Waren gefühlt aber auch die einzigen 3 Teilnehmer, die das google Docs genutzt haben. Schade, weil die Aufgabe eigentlich echt Spaß gemacht hat.\par
+	\vspace{12pt}
+	\textbf{beim Testen aufgetretene Probleme}
+	\begin{itemize}
+		\item falsch formatierte Nachrichten
+		\item (mein highlight) falsche Puffer Länge
+		\item falsche Indizierung der Hände (0 bzw. 1)
+		\item kein Kartenzähler zum testen
+	\end{itemize}
 	
 	\end{document}

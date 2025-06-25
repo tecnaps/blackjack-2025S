@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.5.19)  25 JUN 2025 18:20
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.5.19)  25 JUN 2025 22:50
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -664,35 +664,38 @@ Package pdftex.def Info: blatt_5/u5.pdf , page2 used on input line 26.
 [2
 
  <./blatt_5/u5.pdf>]
-Overfull \hbox (4.4348pt too wide) in paragraph at lines 42--42
-[]\OT1/cmr/m/n/12 Es muss sichergestellt wer-den, dass nachrichten, die ver-sch
+Overfull \hbox (6.71533pt too wide) in paragraph at lines 44--44
+[]\OT1/cmr/m/n/12 Es muss sichergestellt wer-den, dass Nachrichten, die ver-sch
 ickt wer-den, ankom-
  []
 
 
 
-[3{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] (./u5.aux)
+[3{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
+
+[4{/usr/share/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}] (./u5.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 18226 strings out of 475171
- 366879 string characters out of 5767095
+ 18234 strings out of 475171
+ 367027 string characters out of 5767095
  729914 words of memory out of 5000000
- 40945 multiletter control sequences out of 15000+600000
- 560087 words of font info for 40 fonts, out of 8000000 for 9000
+ 40951 multiletter control sequences out of 15000+600000
+ 560731 words of font info for 42 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  84i,17n,87p,765b,438s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/
 texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-dist/font
 s/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-dist/fonts/type1/public/
-amsfonts/cm/cmti12.pfb>
-Output written on u5.pdf (3 pages, 223605 bytes).
+amsfonts/cm/cmti12.pfb></usr/share/texmf-dist/fonts/type1/public/cm-super/sfrm1
+200.pfb>
+Output written on u5.pdf (4 pages, 234752 bytes).
 PDF statistics:
- 66 PDF objects out of 1000 (max. 8388607)
- 43 compressed objects within 1 object stream
+ 75 PDF objects out of 1000 (max. 8388607)
+ 49 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  33 words of extra memory for PDF output out of 10000 (max. 10000000)
 
